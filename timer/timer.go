@@ -16,6 +16,10 @@ func SetTimeout(callback TimerFunc, duration int64) {
 type Interval chan bool
 
 func (interval Interval) Close() {
+	if interval == nil {
+		return
+	}
+
 	interval <- true
 	close(interval)
 }

@@ -2,6 +2,14 @@
 
 package log
 
+import (
+	log "github.com/sirupsen/logrus"
+)
+
+var (
+	log_level = log.InfoLevel
+)
+
 // 日志，级别：调试。只在测试环境输出
 func D(v ...interface{}) {
 }

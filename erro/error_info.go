@@ -3,19 +3,8 @@ package erro
 import (
 	"fmt"
 
-	"github.com/czsilence/go/typo"
-
-	"github.com/czsilence/go/log"
+	log "github.com/sirupsen/logrus"
 )
-
-type Error interface {
-	error
-	Code() int32
-	Msg() string
-
-	D(data typo.Any) Error
-	F(format string, args ...typo.Any) Error
-}
 
 type _Error struct {
 	code int32
@@ -28,7 +17,7 @@ var (
 )
 
 func (ei *_Error) Error() string {
-	return fmt.Sprintf("[Error#%d:%s]", ei.code, ei.msg)
+	return fmt.Sprintf("[_Error#%d:%s]", ei.code, ei.msg)
 }
 
 func (ei *_Error) Code() int32 {
@@ -38,7 +27,7 @@ func (ei *_Error) Code() int32 {
 func (ei *_Error) Msg() string {
 	return ei.msg
 }
-func (ei *_Error) SetData(_data typo.Any) {
+func (ei *_Error) SetData(_data interface{}) {
 	ei.data = _data
 }
 func (ei *_Error) Data() interface{} {
@@ -47,7 +36,7 @@ func (ei *_Error) Data() interface{} {
 
 func New(code int32, msg string) Error {
 	if _, ex := code_checker[code]; ex {
-		log.E("[errdef] new a duplicated error:", code, msg)
+		log.Fatalln("[error] new a duplicated error:", code, msg)
 	} else {
 		code_checker[code] = true
 	}
@@ -57,10 +46,10 @@ func New(code int32, msg string) Error {
 	}
 }
 
-func (ei *_Error) F(format string, args ...typo.Any) Error {
+func (ei *_Error) F(format string, args ...interface{}) Error {
 	new_ei := &_Error{
 		code: ei.code,
-		msg:  ei.msg + " " + fmt.Sprintf(format, args...),
+		msg:  ei.msg + "::" + fmt.Sprintf(format, args...),
 	}
 	return new_ei
 }
@@ -68,4 +57,16 @@ func (ei *_Error) F(format string, args ...typo.Any) Error {
 func (ei *_Error) D(data interface{}) Error {
 	ei.data = data
 	return ei
+}
+
+func (ei *_Error) With(err error) Error {
+	return ei.F("err: %v", err)
+}
+
+func (ei *_Error) Is(err Error) bool {
+	if _err, ok := err.(*_Error); !ok {
+		return false
+	} else {
+		return ei.code == _err.code
+	}
 }

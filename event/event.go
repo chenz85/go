@@ -8,13 +8,7 @@ import (
 
 // 简单的事件处理
 
-type EventHandlerFunc = func(args ...typo.Any)
-
-type EventHandler struct {
-	handleFunc EventHandlerFunc
-}
-
-type EventHandlerList = []*EventHandler
+type EventHandlerList = []EventMethod
 
 type EventPackage struct {
 	normal EventHandlerList
@@ -40,18 +34,20 @@ func checkInit() {
 }
 
 // 绑定事件
-func On(eventName string, handlerFunc EventHandlerFunc) {
-	handler := &EventHandler{handleFunc: handlerFunc}
-	addEventHandler(eventName, handler, false)
+func On(eventName string, method interface{}) {
+	if em, err := NewEventMethod(method); err == nil {
+		addEventHandler(eventName, em, false)
+	}
 }
 
 // 绑定一次性执行的事件
-func Once(eventName string, handlerFunc EventHandlerFunc) {
-	handler := &EventHandler{handleFunc: handlerFunc}
-	addEventHandler(eventName, handler, true)
+func Once(eventName string, method interface{}) {
+	if em, err := NewEventMethod(method); err == nil {
+		addEventHandler(eventName, em, true)
+	}
 }
 
-func addEventHandler(name string, h *EventHandler, once bool) {
+func addEventHandler(name string, method EventMethod, once bool) {
 	mu_eventMap.Lock()
 	defer mu_eventMap.Unlock()
 
@@ -65,14 +61,15 @@ func addEventHandler(name string, h *EventHandler, once bool) {
 	eventMap[name] = pkg
 
 	if once {
-		pkg.once = append(pkg.once, h)
+		pkg.once = append(pkg.once, method)
 	} else {
-		pkg.normal = append(pkg.normal, h)
+		pkg.normal = append(pkg.normal, method)
 	}
 }
 
 // 触发事件
-func Emit(eventName string, args ...typo.Any) {
+// 如果事件响应过程中出错，返回第一个错误。
+func Emit(eventName string, args ...typo.Any) (err error) {
 	mu_eventMap.Lock()
 
 	var tmp EventHandlerList
@@ -86,6 +83,9 @@ func Emit(eventName string, args ...typo.Any) {
 	mu_eventMap.Unlock()
 
 	for _, v := range tmp {
-		v.handleFunc(args...)
+		if _, ie := v.InvokeWithParams(args...); ie != nil && err == nil {
+			err = ie
+		}
 	}
+	return
 }

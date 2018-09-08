@@ -5,7 +5,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/czsilence/go/event"
 	"github.com/czsilence/go/log"
 )
 
@@ -17,12 +16,7 @@ func HandleInterrupt() {
 		select {
 		case <-interrupt:
 			log.I("[app]", "got interrupt, clear and exiting...")
-			// 事件，通知其他功能执行退出前的清理
-			event.Emit("on_exit")
-
-			log.I("[app]", "all clear, exit.")
-			// 退出程序
-			os.Exit(0)
+			Exit(0)
 		}
 	}
 }
